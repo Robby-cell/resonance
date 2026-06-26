@@ -13,11 +13,13 @@
  */
 
 import type { SongProvider } from "./types";
+import { youtubeProvider } from "./youtube";
 import { spotifyProvider } from "./spotify";
 import { soundcloudProvider } from "./soundcloud";
 import { directProvider } from "./direct";
 
 export const providers: SongProvider[] = [
+  youtubeProvider,
   spotifyProvider,
   soundcloudProvider,
   directProvider, // MUST be last — it's the fallback.

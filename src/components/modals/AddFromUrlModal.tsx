@@ -72,7 +72,14 @@ export function AddFromUrlModal({
     setProbed(false);
     try {
       const provider = matchProvider(url.trim());
+      console.log(
+        "[AddFromUrl] Matched provider:",
+        provider.name,
+        "for URL:",
+        url.trim(),
+      );
       const result = await provider.resolve(url.trim());
+      console.log("[AddFromUrl] Resolve result:", result);
 
       setResolved(result);
       setTitle(result.title);
@@ -91,12 +98,17 @@ export function AddFromUrlModal({
         toast.success("Audio downloaded for offline storage", {
           description: `${mb} MB · ${Math.round(result.durationSec)}s`,
         });
+      } else if (providerName === "YouTube") {
+        toast.success(`Found on YouTube!`, {
+          description: `${result.title} · ${result.artist}`,
+        });
       } else {
         toast("Adding as remote link", {
           description: "CORS blocked the download — will stream from the URL.",
         });
       }
     } catch (e: any) {
+      console.error("[AddFromUrl] Probe failed:", e);
       toast.error("Couldn't process that URL", {
         description: e?.message ?? "Please check the link and try again.",
       });
@@ -136,8 +148,9 @@ export function AddFromUrlModal({
           artist: artist.trim() || "Unknown artist",
           durationSec: resolved.durationSec,
           url: resolved.sourceUrl,
+          coverUrl: resolved.coverUrl,
           mimeType: resolved.audioMime,
-          sourceType: "direct",
+          sourceType: providerName === "YouTube" ? "youtube" : "direct",
           providerName,
         });
       }
@@ -168,7 +181,7 @@ export function AddFromUrlModal({
           </DialogTitle>
           <DialogDescription className="text-white/60">
             Paste a link to a song. We support direct audio URLs (mp3, wav,
-            etc.),
+            etc.), <span className="text-[#ff7700]">Youtube</span>,
             <span className="text-[#ff6b4a]"> Spotify</span>, and{" "}
             <span className="text-[#ff5500]">SoundCloud</span>. Direct URLs are
             downloaded for offline storage; Spotify/SoundCloud play via their

@@ -68,7 +68,7 @@ type LibraryStore = {
     coverBlob?: Blob | null;
     coverMime?: string;
     coverUrl?: string;
-    sourceType?: "direct" | "embed";
+    sourceType?: "direct" | "embed" | "youtube";
     embedUrl?: string;
     embedType?: "spotify" | "soundcloud";
     providerName?: string;
@@ -231,8 +231,7 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
   },
 
   removeSong: async (id) => {
-    // Permanently delete: remove metadata, audio blob, cover, and purge from
-    // all playlists.
+    // Permanently delete: remove metadata, audio blob, and purge from all playlists.
     await deleteSongMeta(id);
     await deleteSongBlob(id);
     const playlists = get().playlists;
@@ -265,9 +264,22 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     if (!cur || !cur.sourceUrl) return;
     if (cur.sourceType === "blob") return; // already stored locally
 
+    // For YouTube songs, resolve a fresh stream URL first.
+    let audioUrl = cur.sourceUrl;
+    if (cur.sourceType === "youtube") {
+      const { resolveYouTubeStream } = await import("./providers/youtube");
+      const streamUrl = await resolveYouTubeStream(cur.sourceUrl);
+      if (!streamUrl) {
+        throw new Error(
+          "Couldn't resolve a YouTube audio stream for this video.",
+        );
+      }
+      audioUrl = streamUrl;
+    }
+
     // Try to fetch the audio and store it as a blob.
     const { fetchRemoteAudio } = await import("./audio");
-    const result = await fetchRemoteAudio(cur.sourceUrl);
+    const result = await fetchRemoteAudio(audioUrl);
     if (!result.blob) {
       throw new Error(
         "Couldn't download this audio file. The source server may not allow cross-origin downloads (CORS).",
@@ -494,7 +506,6 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       get().playContext(contextSongIds, contextSongIds.indexOf(songId));
       return;
     }
-    // Just play this single song
     set({
       queue: [songId],
       shuffleQueue: [songId],
@@ -514,7 +525,6 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     const shuf = get().shuffle
       ? (() => {
           const a = shuffleArray(songIds);
-          // ensure start song is first
           const start = songIds[startIndex];
           if (start) {
             const i = a.indexOf(start);
@@ -567,7 +577,6 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       if (st.repeat === "all") {
         nextIdx = 0;
       } else {
-        // Stop at end
         set({ isPlaying: false });
         const audio = get().audioEl;
         if (audio) audio.pause();
@@ -585,7 +594,6 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
           ? [activeQueue[st.currentIndex], ...st.history].slice(0, 50)
           : st.history,
     });
-    // For <audio> playback, EmbedPlayer handles embed songs automatically.
     const audio = get().audioEl;
     if (audio) {
       audio.currentTime = 0;

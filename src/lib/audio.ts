@@ -228,12 +228,21 @@ const objectUrlCache = new Map<string, string>();
 export async function resolveAudioSource(
   songId: string,
 ): Promise<string | null> {
-  // Remote songs just use their source URL
   const lib = await import("./store");
   const song = lib.useLibraryStore
     .getState()
     .songs.find((s) => s.id === songId);
   if (!song) return null;
+
+  // YouTube songs: resolve a fresh audio stream URL via youtubei.js.
+  // Stream URLs expire after ~6 hours, so we can't store them permanently.
+  if (song.sourceType === "youtube" && song.sourceUrl) {
+    const { resolveYouTubeStream } = await import("./providers/youtube");
+    const streamUrl = await resolveYouTubeStream(song.sourceUrl);
+    return streamUrl;
+  }
+
+  // Remote songs (direct URLs) just use their source URL
   if (song.isRemote && song.sourceUrl) return song.sourceUrl;
 
   // Uploaded songs: fetch blob from IndexedDB
