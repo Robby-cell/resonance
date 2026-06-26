@@ -68,9 +68,9 @@ type LibraryStore = {
     coverBlob?: Blob | null;
     coverMime?: string;
     coverUrl?: string;
-    sourceType?: "direct" | "embed" | "youtube";
+    sourceType?: "direct" | "embed";
     embedUrl?: string;
-    embedType?: "spotify" | "soundcloud";
+    embedType?: "spotify" | "soundcloud" | "youtube";
     providerName?: string;
   }) => Promise<Song>;
   updateSongMeta: (
@@ -263,23 +263,11 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     const cur = get().songs.find((s) => s.id === id);
     if (!cur || !cur.sourceUrl) return;
     if (cur.sourceType === "blob") return; // already stored locally
+    if (cur.sourceType === "embed") return; // embeds (Spotify/SoundCloud/YouTube) can't be downloaded
 
-    // For YouTube songs, resolve a fresh stream URL first.
-    let audioUrl = cur.sourceUrl;
-    if (cur.sourceType === "youtube") {
-      const { resolveYouTubeStream } = await import("./providers/youtube");
-      const streamUrl = await resolveYouTubeStream(cur.sourceUrl);
-      if (!streamUrl) {
-        throw new Error(
-          "Couldn't resolve a YouTube audio stream for this video.",
-        );
-      }
-      audioUrl = streamUrl;
-    }
-
-    // Try to fetch the audio and store it as a blob.
+    // Direct-URL songs: fetch the audio and store it as a blob.
     const { fetchRemoteAudio } = await import("./audio");
-    const result = await fetchRemoteAudio(audioUrl);
+    const result = await fetchRemoteAudio(cur.sourceUrl);
     if (!result.blob) {
       throw new Error(
         "Couldn't download this audio file. The source server may not allow cross-origin downloads (CORS).",

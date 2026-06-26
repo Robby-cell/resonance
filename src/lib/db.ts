@@ -29,11 +29,11 @@ export type SongRecord = {
   /** Whether this song is a remote (URL) track vs uploaded blob. */
   isRemote: boolean;
   /** How this song is played back. */
-  sourceType: "blob" | "direct" | "embed" | "youtube";
+  sourceType: "blob" | "direct" | "embed";
   /** For embed songs: the iframe embed URL. */
   embedUrl?: string;
   /** For embed songs: which platform's embed. */
-  embedType?: "spotify" | "soundcloud";
+  embedType?: "spotify" | "soundcloud" | "youtube";
   /** Display name of the provider that resolved this song. */
   providerName?: string;
   /** Whether this song has been "soft deleted" — kept as a placeholder in playlists. */

@@ -89,3 +89,31 @@ export function loadSoundCloudWidgetApi(): Promise<any> {
 
   return scApiPromise;
 }
+
+/**
+ * Load the YouTube IFrame API. Resolves with the YT global.
+ * The script calls window.onYouTubeIframeAPIReady when loaded.
+ */
+let ytApiPromise: Promise<any> | null = null;
+
+export function loadYouTubeIframeApi(): Promise<any> {
+  if (ytApiPromise) return ytApiPromise;
+  if (typeof window === "undefined")
+    return Promise.reject(new Error("no window"));
+
+  ytApiPromise = new Promise((resolve, reject) => {
+    const existing = (window as any).YT;
+    if (existing?.Player) {
+      resolve(existing);
+      return;
+    }
+    (window as any).onYouTubeIframeAPIReady = () => {
+      const yt = (window as any).YT;
+      if (yt?.Player) resolve(yt);
+      else reject(new Error("YouTube IFrame API not available after load"));
+    };
+    loadScript("https://www.youtube.com/iframe_api").catch(reject);
+  });
+
+  return ytApiPromise;
+}

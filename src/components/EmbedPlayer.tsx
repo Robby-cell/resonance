@@ -5,6 +5,7 @@ import { usePlayerStore, useLibraryStore } from "@/lib/store";
 import {
   loadSpotifyIframeApi,
   loadSoundCloudWidgetApi,
+  loadYouTubeIframeApi,
 } from "@/lib/loadScript";
 import {
   setActiveEmbedController,
@@ -70,6 +71,8 @@ export function EmbedPlayer() {
           await setupSpotify();
         } else if (embedType === "soundcloud") {
           await setupSoundCloud();
+        } else if (embedType === "youtube") {
+          await setupYouTube();
         }
       } catch (e) {
         console.error("EmbedPlayer setup failed:", e);
@@ -172,17 +175,116 @@ export function EmbedPlayer() {
       });
     }
 
+    async function setupYouTube() {
+      const YT = await loadYouTubeIframeApi();
+      if (destroyed) return;
+
+      // Extract the video ID from the embed URL.
+      const match = embedUrl!.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
+      const videoId = match?.[1];
+      if (!videoId) {
+        console.error("Couldn't parse YouTube video ID from", embedUrl);
+        return;
+      }
+
+      // YT.Player replaces the target element with an iframe. We use a div
+      // container so YT.Player creates the iframe inside it.
+      const container = document.createElement("div");
+      container.style.cssText =
+        "position:absolute;width:300px;height:200px;left:-9999px;top:0;border:none;";
+      document.body.appendChild(container);
+      if (destroyed) {
+        container.remove();
+        return;
+      }
+
+      const player = new YT.Player(container, {
+        videoId,
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+          disablekb: 1,
+          fs: 0,
+          modestbranding: 1,
+          playsinline: 1,
+          rel: 0,
+        },
+        events: {
+          onReady: () => {
+            if (destroyed) return;
+            const dur = player.getDuration();
+            usePlayerStore.getState().setDuration(dur || 0);
+            if (usePlayerStore.getState().isPlaying) {
+              try {
+                player.playVideo();
+              } catch {}
+            }
+            void useLibraryStore.getState().incrementPlayCount(currentSong!.id);
+          },
+          onStateChange: (e: any) => {
+            if (destroyed) return;
+            const YTState = (window as any).YT;
+            if (e.data === YTState.PlayerState.PLAYING) {
+              usePlayerStore.getState().setIsPlaying(true);
+            } else if (e.data === YTState.PlayerState.PAUSED) {
+              usePlayerStore.getState().setIsPlaying(false);
+            } else if (e.data === YTState.PlayerState.ENDED) {
+              usePlayerStore.getState().next();
+            }
+            const dur = player.getDuration();
+            if (dur > 0) usePlayerStore.getState().setDuration(dur);
+          },
+        },
+      });
+
+      controllerRef.current = {
+        play: () => player.playVideo(),
+        pause: () => player.pauseVideo(),
+        seek: (seconds: number) => player.seekTo(seconds, true),
+        setVolume: (v: number) => player.setVolume(Math.round(v * 100)),
+        supportsVolume: true,
+      };
+      setActiveEmbedController(controllerRef.current);
+
+      // Poll current time — YouTube API doesn't have a position-change event.
+      const pollInterval = setInterval(() => {
+        if (destroyed) {
+          clearInterval(pollInterval);
+          return;
+        }
+        try {
+          if (player.getCurrentTime) {
+            usePlayerStore.getState().setCurrentTime(player.getCurrentTime());
+          }
+        } catch {}
+      }, 250);
+
+      // Store cleanup function to remove the container.
+      (controllerRef.current as any).__cleanup = () => {
+        clearInterval(pollInterval);
+        try {
+          player.destroy();
+        } catch {}
+        container.remove();
+      };
+    }
+
     setup();
 
     return () => {
       destroyed = true;
+      // Run YouTube-specific cleanup if present.
+      const cleanup = (controllerRef.current as any)?.__cleanup;
+      if (cleanup) cleanup();
       setActiveEmbedController(null);
       controllerRef.current = null;
     };
   }, [isEmbed, embedUrl, embedType, currentSong?.id]);
 
-  // Render the iframe only when an embed song is active.
+  // Render the iframe only for Spotify and SoundCloud.
+  // YouTube uses a div container created in setupYouTube() instead.
   if (!isEmbed || !embedUrl) return null;
+  if (embedType === "youtube") return null;
 
   return (
     <iframe

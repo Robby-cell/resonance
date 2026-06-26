@@ -11,7 +11,7 @@
  * is the fallback that matches everything, so it must be last.
  */
 
-export type EmbedType = "spotify" | "soundcloud";
+export type EmbedType = "spotify" | "soundcloud" | "youtube";
 
 export type ResolvedSong = {
   title: string;

@@ -168,7 +168,7 @@ export function SongRow({
     toast("Added to queue");
   }
 
-  // Whether this song can be downloaded and stored locally (remote/direct/youtube, not blob or embed).
+  // Whether this song can be downloaded and stored locally (direct URLs only, not blob or embed).
   const canDownloadAndStore =
     song.sourceType !== "blob" &&
     song.sourceType !== "embed" &&
