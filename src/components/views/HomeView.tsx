@@ -99,7 +99,7 @@ export function HomeView({
               Add from URL
             </div>
             <div className="text-xs text-white/40 truncate">
-              Spotify, SoundCloud, or direct links
+              YouTube, Spotify, SoundCloud, or direct links
             </div>
           </div>
         </button>
