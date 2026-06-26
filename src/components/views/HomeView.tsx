@@ -1,12 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import { useLibraryStore, usePlayerStore, Song, Playlist } from "@/lib/store";
 import { SongCover } from "@/components/SongCover";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { gradientFor } from "@/lib/format";
-import { Play, Music2, Upload, Link2 } from "lucide-react";
+import { Play, Music2, Upload, Link2, Trash2 } from "lucide-react";
 import { RecommendationsPanel } from "@/components/RecommendationsPanel";
+import { toast } from "sonner";
 
 type HomeViewProps = {
   onOpenUpload: () => void;
@@ -14,11 +26,7 @@ type HomeViewProps = {
   onFindSong?: (query: string) => void;
 };
 
-export function HomeView({
-  onOpenUpload,
-  onOpenAddUrl,
-  onFindSong,
-}: HomeViewProps) {
+export function HomeView({ onOpenUpload, onOpenAddUrl, onFindSong }: HomeViewProps) {
   const songs = useLibraryStore((s) => s.songs);
   const playlists = useLibraryStore((s) => s.playlists);
   const setView = useLibraryStore((s) => s.setView);
@@ -42,16 +50,12 @@ export function HomeView({
     .sort((a, b) => b.playCount - a.playCount)
     .slice(0, 8)
     .filter((s) => s.playCount > 0);
-  const featured = (
-    mostPlayed.length >= 4 ? mostPlayed : songs.slice(0, 8)
-  ).slice(0, 8);
+  const featured = (mostPlayed.length >= 4 ? mostPlayed : songs.slice(0, 8)).slice(0, 8);
 
   return (
     <div className="p-4 sm:p-6 pb-8 space-y-8 animate-fade-in">
       <header>
-        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-          {greeting}
-        </h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{greeting}</h1>
       </header>
 
       {/* Quick action cards */}
@@ -78,9 +82,7 @@ export function HomeView({
             <Upload className="h-5 w-5 text-white" />
           </div>
           <div className="min-w-0">
-            <div className="text-white font-semibold truncate text-sm">
-              Upload music
-            </div>
+            <div className="text-white font-semibold truncate text-sm">Upload music</div>
             <div className="text-xs text-white/40 truncate">
               Drop MP3s from your device
             </div>
@@ -95,11 +97,9 @@ export function HomeView({
             <Link2 className="h-5 w-5 text-white" />
           </div>
           <div className="min-w-0">
-            <div className="text-white font-semibold truncate text-sm">
-              Add from URL
-            </div>
+            <div className="text-white font-semibold truncate text-sm">Add from URL</div>
             <div className="text-xs text-white/40 truncate">
-              YouTube, Spotify, SoundCloud, or direct links
+              Spotify, SoundCloud, or direct links
             </div>
           </div>
         </button>
@@ -112,7 +112,7 @@ export function HomeView({
               <div
                 className={cn(
                   "w-14 h-14 bg-gradient-to-br flex items-center justify-center shrink-0",
-                  gradientFor(p.coverSeed ?? p.id),
+                  gradientFor(p.coverSeed ?? p.id)
                 )}
               >
                 <Music2 className="h-5 w-5 text-white/80" />
@@ -120,7 +120,9 @@ export function HomeView({
             }
             title={p.name}
             subtitle={`Playlist · ${p.songIds.length} song${p.songIds.length !== 1 ? "s" : ""}`}
-            onPlay={() => p.songIds.length > 0 && playContext(p.songIds)}
+            onPlay={() =>
+              p.songIds.length > 0 && playContext(p.songIds)
+            }
           />
         ))}
       </section>
@@ -171,12 +173,7 @@ export function HomeView({
               <SongCard
                 key={song.id}
                 song={song}
-                onPlay={() =>
-                  playContext(
-                    songs.map((s) => s.id),
-                    songs.findIndex((s) => s.id === song.id),
-                  )
-                }
+                onPlay={() => playContext(songs.map((s) => s.id), songs.findIndex((s) => s.id === song.id))}
               />
             ))}
           </div>
@@ -191,12 +188,7 @@ export function HomeView({
               <SongCard
                 key={song.id}
                 song={song}
-                onPlay={() =>
-                  playContext(
-                    songs.map((s) => s.id),
-                    songs.findIndex((s) => s.id === song.id),
-                  )
-                }
+                onPlay={() => playContext(songs.map((s) => s.id), songs.findIndex((s) => s.id === song.id))}
               />
             ))}
           </div>
@@ -212,7 +204,9 @@ export function HomeView({
                 key={p.id}
                 playlist={p}
                 onClick={() => setView({ kind: "playlist", id: p.id })}
-                onPlay={() => p.songIds.length > 0 && playContext(p.songIds)}
+                onPlay={() =>
+                  p.songIds.length > 0 && playContext(p.songIds)
+                }
               />
             ))}
           </div>
@@ -232,9 +226,7 @@ function Section({
   return (
     <section>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-          {title}
-        </h2>
+        <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">{title}</h2>
       </div>
       {children}
     </section>
@@ -278,36 +270,91 @@ function QuickCard({
   );
 }
 
-function SongCard({ song, onPlay }: { song: Song; onPlay: () => void }) {
+function SongCard({
+  song,
+  onPlay,
+}: {
+  song: Song;
+  onPlay: () => void;
+}) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const removeSong = useLibraryStore((s) => s.removeSong);
+
+  async function handleDelete() {
+    await removeSong(song.id);
+    toast.success("Song removed from library");
+    setDeleteOpen(false);
+  }
+
   return (
-    <div
-      className="group relative rounded-lg bg-white/[0.02] hover:bg-white/[0.06] transition-colors p-3 cursor-pointer min-w-0"
-      onClick={onPlay}
-    >
-      <div className="relative mb-3">
-        <SongCover
-          songId={song.id}
-          title={song.title}
-          artist={song.artist}
-          className="w-full aspect-square"
-          rounded="rounded-md"
-        />
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onPlay();
-          }}
-          className="absolute right-2 bottom-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all bg-[#ff6b4a] text-white rounded-full h-10 w-10 flex items-center justify-center hover:scale-105 shadow-lg rs-glow"
-          aria-label="Play"
-        >
-          <Play className="fill-current ml-0.5" size={16} />
-        </button>
+    <>
+      <div
+        className="group relative rounded-lg bg-white/[0.02] hover:bg-white/[0.06] transition-colors p-3 cursor-pointer min-w-0"
+        onClick={onPlay}
+      >
+        <div className="relative mb-3">
+          <SongCover
+            songId={song.id}
+            title={song.title}
+            artist={song.artist}
+            className="w-full aspect-square"
+            rounded="rounded-md"
+          />
+          {/* Play button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onPlay();
+            }}
+            className="absolute right-2 bottom-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all bg-[#ff6b4a] text-white rounded-full h-10 w-10 flex items-center justify-center hover:scale-105 shadow-lg rs-glow"
+            aria-label="Play"
+          >
+            <Play className="fill-current ml-0.5" size={16} />
+          </button>
+          {/* Delete button — top-right corner, appears on hover */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteOpen(true);
+            }}
+            className="absolute left-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-red-600/80 text-white rounded-full h-7 w-7 flex items-center justify-center backdrop-blur-sm"
+            aria-label="Delete from library"
+            title="Delete from library"
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
+        <div className="text-sm font-semibold text-white truncate">{song.title}</div>
+        <div className="text-xs text-white/40 truncate">{song.artist}</div>
       </div>
-      <div className="text-sm font-semibold text-white truncate">
-        {song.title}
-      </div>
-      <div className="text-xs text-white/40 truncate">{song.artist}</div>
-    </div>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent className="bg-[#111118] border-white/8 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">
+              Delete this song?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">
+              <span className="text-white">"{song.title}"</span> by{" "}
+              <span className="text-white">{song.artist}</span> will be
+              permanently removed from your library and all playlists. This
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-white/15 text-white hover:bg-white/8">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -329,7 +376,7 @@ function PlaylistCard({
         <div
           className={cn(
             "w-full aspect-square rounded-md bg-gradient-to-br flex items-center justify-center",
-            gradientFor(playlist.coverSeed ?? playlist.id),
+            gradientFor(playlist.coverSeed ?? playlist.id)
           )}
         >
           <Music2 className="h-10 w-10 text-white/70" />
@@ -346,9 +393,7 @@ function PlaylistCard({
           <Play className="fill-current ml-0.5" size={16} />
         </button>
       </div>
-      <div className="text-sm font-semibold text-white truncate">
-        {playlist.name}
-      </div>
+      <div className="text-sm font-semibold text-white truncate">{playlist.name}</div>
       <div className="text-xs text-white/40 truncate">
         {playlist.songIds.length} song{playlist.songIds.length !== 1 ? "s" : ""}
       </div>

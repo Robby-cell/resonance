@@ -164,7 +164,12 @@ export function EmbedPlayer() {
 
       widget.bind(SC.Widget.Events.FINISH, () => {
         if (destroyed) return;
-        usePlayerStore.getState().next();
+        const st = usePlayerStore.getState();
+        if (st.repeat === "one") {
+          st.replayCurrent();
+        } else {
+          st.next();
+        }
       });
     }
 
@@ -193,6 +198,17 @@ export function EmbedPlayer() {
         return;
       }
 
+      // Watch for the iframe that YT.Player will insert into the container,
+      // and hide it immediately when it appears.
+      const observer = new MutationObserver(() => {
+        const iframe = container.querySelector('iframe');
+        if (iframe) {
+          iframe.style.cssText =
+            'position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;border:0;overflow:hidden;visibility:hidden;pointer-events:none;opacity:0;';
+        }
+      });
+      observer.observe(container, { childList: true, subtree: true });
+
       const player = new YT.Player(container, {
         videoId,
         playerVars: {
@@ -203,10 +219,18 @@ export function EmbedPlayer() {
           modestbranding: 1,
           playsinline: 1,
           rel: 0,
+          iv_load_policy: 3, // hide annotations
+          showinfo: 0,
         },
         events: {
-          onReady: () => {
+          onReady: (e: any) => {
             if (destroyed) return;
+            // Aggressively hide the iframe that YT.Player created.
+            const iframe = e.target?.getIframe?.() || container.querySelector('iframe');
+            if (iframe) {
+              iframe.style.cssText =
+                'position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;border:0;overflow:hidden;visibility:hidden;pointer-events:none;opacity:0;';
+            }
             const dur = player.getDuration();
             usePlayerStore.getState().setDuration(dur || 0);
             if (usePlayerStore.getState().isPlaying) {
@@ -224,7 +248,12 @@ export function EmbedPlayer() {
             } else if (e.data === YTState.PlayerState.PAUSED) {
               usePlayerStore.getState().setIsPlaying(false);
             } else if (e.data === YTState.PlayerState.ENDED) {
-              usePlayerStore.getState().next();
+              const st = usePlayerStore.getState();
+              if (st.repeat === "one") {
+                st.replayCurrent();
+              } else {
+                st.next();
+              }
             }
             const dur = player.getDuration();
             if (dur > 0) usePlayerStore.getState().setDuration(dur);
@@ -257,6 +286,7 @@ export function EmbedPlayer() {
       // Store cleanup function to remove the container.
       (controllerRef.current as any).__cleanup = () => {
         clearInterval(pollInterval);
+        observer.disconnect();
         try {
           player.destroy();
         } catch { }

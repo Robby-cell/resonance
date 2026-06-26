@@ -89,7 +89,7 @@ function buildM3U(playlist: Playlist, songs: Song[]): string {
       lines.push(song.sourceUrl);
     } else {
       // Use a placeholder filename derived from the song — these M3Us are
-      // useful for re-import into Spotifree or other players when paired with
+      // useful for re-import into Resonance or other players when paired with
       // the matching audio files.
       const safeName = `${song.artist} - ${song.title}`
         .replace(/[\\/:*?"<>|]/g, "_")
@@ -113,13 +113,13 @@ export async function exportPlaylistM3U(playlistId: string) {
 }
 
 /** Export a playlist's full data including audio blobs as a single JSON.
- *  Suitable for round-tripping through Spotifree on another device. */
+ *  Suitable for round-tripping through Resonance on another device. */
 export async function exportPlaylistBundle(playlistId: string) {
   const { playlists, songs } = useLibraryStore.getState();
   const pl = playlists.find((p) => p.id === playlistId);
   if (!pl) return;
   const bundle: any = {
-    type: "spotifree-playlist-bundle",
+    type: "resonance-playlist-bundle",
     version: 1,
     exportedAt: new Date().toISOString(),
     playlist: {
@@ -155,7 +155,7 @@ export async function exportPlaylistBundle(playlistId: string) {
   }
   const safeName = pl.name.replace(/[\\/:*?"<>|]/g, "_").slice(0, 60);
   downloadFile(
-    `${safeName}.spotifree.json`,
+    `${safeName}.resonance.json`,
     JSON.stringify(bundle),
     "application/json",
   );
@@ -183,8 +183,8 @@ function base64ToBlob(b64: string, mime: string): Blob {
 /** Import a playlist bundle JSON. Returns the number of songs imported. */
 export async function importPlaylistBundle(json: string): Promise<number> {
   const data = JSON.parse(json);
-  if (data.type !== "spotifree-playlist-bundle") {
-    throw new Error("Not a Spotifree playlist bundle");
+  if (data.type !== "resonance-playlist-bundle") {
+    throw new Error("Not a Resonance playlist bundle");
   }
   const store = useLibraryStore.getState();
   // Reuse existing song ids if title+artist matches (avoid dupes)

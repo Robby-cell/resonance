@@ -5,6 +5,16 @@ import { usePlayerStore, useLibraryStore } from "@/lib/store";
 import { SongCover } from "./SongCover";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/format";
 import {
@@ -34,6 +44,8 @@ export function PlayerBar({ onOpenQueue }: PlayerBarProps) {
   const player = usePlayerStore();
   const songs = useLibraryStore((s) => s.songs);
   const toggleLike = useLibraryStore((s) => s.toggleLike);
+  const removeSong = useLibraryStore((s) => s.removeSong);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const shuffle = player.shuffle;
   const repeat = player.repeat;
@@ -90,8 +102,8 @@ export function PlayerBar({ onOpenQueue }: PlayerBarProps) {
             min={0}
             max={100}
             step={0.1}
-            onValueChange={(v) => onSeekChange([(v[0] * duration) / 100])}
-            onValueCommit={(v) => onSeekCommit([(v[0] * duration) / 100])}
+            onValueChange={(v) => onSeekChange([v[0] * duration / 100])}
+            onValueCommit={(v) => onSeekCommit([v[0] * duration / 100])}
             style={{ ["--progress" as any]: `${progressPct}%` }}
             disabled={duration === 0}
             aria-label="Seek"
@@ -121,22 +133,21 @@ export function PlayerBar({ onOpenQueue }: PlayerBarProps) {
                 </div>
                 <div className="text-xs text-white/50 truncate flex items-center gap-1.5">
                   <span className="truncate">{currentSong.artist}</span>
-                  {currentSong.sourceType === "embed" &&
-                    currentSong.providerName && (
-                      <span
-                        className={cn(
-                          "shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none",
-                          currentSong.embedType === "spotify"
-                            ? "bg-[#1db954]/20 text-[#1db954]"
-                            : currentSong.embedType === "soundcloud"
-                              ? "bg-[#ff5500]/20 text-[#ff7733]"
-                              : "bg-white/10 text-white/70",
-                        )}
-                        title={`Playing via ${currentSong.providerName} embed`}
-                      >
-                        {currentSong.providerName}
-                      </span>
-                    )}
+                  {currentSong.sourceType === "embed" && currentSong.providerName && (
+                    <span
+                      className={cn(
+                        "shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none",
+                        currentSong.embedType === "spotify"
+                          ? "bg-[#1db954]/20 text-[#1db954]"
+                          : currentSong.embedType === "soundcloud"
+                            ? "bg-[#ff5500]/20 text-[#ff7733]"
+                            : "bg-white/10 text-white/70"
+                      )}
+                      title={`Playing via ${currentSong.providerName} embed`}
+                    >
+                      {currentSong.providerName}
+                    </span>
+                  )}
                 </div>
               </div>
               <button
@@ -149,9 +160,18 @@ export function PlayerBar({ onOpenQueue }: PlayerBarProps) {
                   className={cn(
                     liked
                       ? "fill-current text-[#ff6b4a]"
-                      : "text-white/50 hover:text-white",
+                      : "text-white/50 hover:text-white"
                   )}
                 />
+              </button>
+              {/* Delete button — subtle but always visible when a song is playing */}
+              <button
+                onClick={() => setDeleteOpen(true)}
+                className="hidden sm:block shrink-0 text-white/30 hover:text-red-400 transition-colors"
+                aria-label="Delete from library"
+                title="Delete from library"
+              >
+                <Trash2 size={14} />
               </button>
             </>
           ) : (
@@ -170,7 +190,7 @@ export function PlayerBar({ onOpenQueue }: PlayerBarProps) {
             onClick={player.toggleShuffle}
             className={cn(
               "transition-colors",
-              shuffle ? "text-[#ff6b4a]" : "text-white/40 hover:text-white",
+              shuffle ? "text-[#ff6b4a]" : "text-white/40 hover:text-white"
             )}
             aria-label="Shuffle"
             title="Shuffle"
@@ -209,9 +229,7 @@ export function PlayerBar({ onOpenQueue }: PlayerBarProps) {
             onClick={player.cycleRepeat}
             className={cn(
               "transition-colors",
-              repeat !== "off"
-                ? "text-[#ff6b4a]"
-                : "text-white/40 hover:text-white",
+              repeat !== "off" ? "text-[#ff6b4a]" : "text-white/40 hover:text-white"
             )}
             aria-label="Repeat"
             title={`Repeat: ${repeat}`}
@@ -289,13 +307,44 @@ export function PlayerBar({ onOpenQueue }: PlayerBarProps) {
           {shuffle ? "Shuffle on" : ""}
         </span>
         <span className="text-[10px] text-white/30">
-          {repeat === "one"
-            ? "Repeat one"
-            : repeat === "all"
-              ? "Repeat all"
-              : ""}
+          {repeat === "one" ? "Repeat one" : repeat === "all" ? "Repeat all" : ""}
         </span>
       </div>
+
+      {/* Delete confirmation dialog */}
+      {currentSong && (
+        <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <AlertDialogContent className="bg-[#111118] border-white/8 text-white">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-white">
+                Delete this song?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-white/60">
+                <span className="text-white">"{currentSong.title}"</span> by{" "}
+                <span className="text-white">{currentSong.artist}</span> will be
+                permanently removed from your library and all playlists. This
+                cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="bg-transparent border-white/15 text-white hover:bg-white/8">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={async () => {
+                  if (!currentSong) return;
+                  await removeSong(currentSong.id);
+                  toast.success("Song removed from library");
+                  setDeleteOpen(false);
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </footer>
   );
 }
@@ -331,7 +380,7 @@ export function QueuePanel({ open, onClose }: QueuePanelProps) {
         "fixed right-0 top-0 bottom-0 w-full sm:w-96 bg-[#0a0a0f] z-50",
         "border-l border-white/8 flex flex-col",
         "transform transition-transform duration-300 ease-out",
-        open ? "translate-x-0" : "translate-x-full",
+        open ? "translate-x-0" : "translate-x-full"
       )}
     >
       <div className="flex items-center justify-between p-4 border-b border-white/8">
@@ -382,21 +431,20 @@ export function QueuePanel({ open, onClose }: QueuePanelProps) {
                 </div>
                 <div className="text-xs text-white/50 truncate flex items-center gap-1.5">
                   <span className="truncate">{currentSong.artist}</span>
-                  {currentSong.sourceType === "embed" &&
-                    currentSong.providerName && (
-                      <span
-                        className={cn(
-                          "shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none",
-                          currentSong.embedType === "spotify"
-                            ? "bg-[#1db954]/20 text-[#1db954]"
-                            : currentSong.embedType === "soundcloud"
-                              ? "bg-[#ff5500]/20 text-[#ff7733]"
-                              : "bg-white/10 text-white/70",
-                        )}
-                      >
-                        {currentSong.providerName}
-                      </span>
-                    )}
+                  {currentSong.sourceType === "embed" && currentSong.providerName && (
+                    <span
+                      className={cn(
+                        "shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none",
+                        currentSong.embedType === "spotify"
+                          ? "bg-[#1db954]/20 text-[#1db954]"
+                          : currentSong.embedType === "soundcloud"
+                            ? "bg-[#ff5500]/20 text-[#ff7733]"
+                            : "bg-white/10 text-white/70"
+                      )}
+                    >
+                      {currentSong.providerName}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

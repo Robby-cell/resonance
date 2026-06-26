@@ -18,11 +18,7 @@ export function AudioEngine() {
   function handleEnded() {
     const st = usePlayerStore.getState();
     if (st.repeat === "one") {
-      const a = audioRef.current;
-      if (a) {
-        a.currentTime = 0;
-        void a.play().catch(() => {});
-      }
+      st.replayCurrent();
       return;
     }
     st.next();
@@ -37,8 +33,7 @@ export function AudioEngine() {
     setAudioEl(a);
     a.volume = usePlayerStore.getState().volume;
 
-    const onTime = () =>
-      usePlayerStore.getState().setCurrentTime(a.currentTime);
+    const onTime = () => usePlayerStore.getState().setCurrentTime(a.currentTime);
     const onDur = () => usePlayerStore.getState().setDuration(a.duration || 0);
     const onPlay = () => usePlayerStore.getState().setIsPlaying(true);
     const onPause = () => usePlayerStore.getState().setIsPlaying(false);
@@ -102,7 +97,7 @@ export function AudioEngine() {
     if (prevSongIdRef.current === currentSong.id) {
       // Same song — no need to reload src. Just ensure play state matches.
       const isPlaying = usePlayerStore.getState().isPlaying;
-      if (isPlaying && a.paused) void a.play().catch(() => {});
+      if (isPlaying && a.paused) void a.play().catch(() => { });
       return;
     }
     prevSongIdRef.current = currentSong.id;

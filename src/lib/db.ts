@@ -56,7 +56,7 @@ export type PlaylistRecord = {
   system?: boolean;
 };
 
-const DB_NAME = "spotifree";
+const DB_NAME = "resonance";
 const DB_VERSION = 1;
 const SONGS_STORE = "songs";
 const SONG_BLOBS_STORE = "songBlobs";

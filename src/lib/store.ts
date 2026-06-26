@@ -75,7 +75,9 @@ type LibraryStore = {
   }) => Promise<Song>;
   updateSongMeta: (
     id: string,
-    patch: Partial<Pick<Song, "title" | "artist" | "album" | "liked">>,
+    patch: Partial<
+      Pick<Song, "title" | "artist" | "album" | "liked">
+    >
   ) => Promise<void>;
   /** Permanently remove a song from the library and all playlists. */
   removeSong: (id: string) => Promise<void>;
@@ -86,18 +88,14 @@ type LibraryStore = {
 
   // Playlist operations
   createPlaylist: (name?: string, description?: string) => Promise<Playlist>;
-  renamePlaylist: (
-    id: string,
-    name: string,
-    description?: string,
-  ) => Promise<void>;
+  renamePlaylist: (id: string, name: string, description?: string) => Promise<void>;
   deletePlaylistById: (id: string) => Promise<void>;
   addToPlaylist: (playlistId: string, songId: string) => Promise<void>;
   removeFromPlaylist: (playlistId: string, songId: string) => Promise<void>;
   reorderPlaylist: (
     playlistId: string,
     fromIndex: number,
-    toIndex: number,
+    toIndex: number
   ) => Promise<void>;
 
   // Bulk
@@ -138,11 +136,7 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
       } else {
         // Reconcile liked songIds with actual liked songs
         const likedIds = songs.filter((s) => s.liked).map((s) => s.id);
-        if (
-          JSON.stringify(
-            new Set(likedIds).symmetricDifference(new Set(liked.songIds)).size,
-          ) !== "0"
-        ) {
+        if (JSON.stringify(new Set(likedIds).symmetricDifference(new Set(liked.songIds)).size) !== "0") {
           liked.songIds = likedIds;
           liked.updatedAt = Date.now();
           await putPlaylist(liked);
@@ -250,11 +244,11 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
       playlists: st.playlists.map((p) =>
         p.songIds.includes(id)
           ? {
-              ...p,
-              songIds: p.songIds.filter((x) => x !== id),
-              updatedAt: Date.now(),
-            }
-          : p,
+            ...p,
+            songIds: p.songIds.filter((x) => x !== id),
+            updatedAt: Date.now(),
+          }
+          : p
       ),
     }));
   },
@@ -270,7 +264,7 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     const result = await fetchRemoteAudio(cur.sourceUrl);
     if (!result.blob) {
       throw new Error(
-        "Couldn't download this audio file. The source server may not allow cross-origin downloads (CORS).",
+        "Couldn't download this audio file. The source server may not allow cross-origin downloads (CORS)."
       );
     }
     const { putSongBlob } = await import("./db");
@@ -361,10 +355,9 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     await deletePlaylist(id);
     set((st) => ({
       playlists: st.playlists.filter((p) => p.id !== id),
-      view:
-        st.view?.kind === "playlist" && st.view.id === id
-          ? { kind: "library" }
-          : st.view,
+      view: st.view?.kind === "playlist" && st.view.id === id
+        ? { kind: "library" }
+        : st.view,
     }));
   },
 
@@ -451,6 +444,8 @@ type PlayerStore = {
   togglePlay: () => void;
   next: () => void;
   prev: () => void;
+  /** Restart the current song from the beginning (used by repeat-one). */
+  replayCurrent: () => void;
   seek: (sec: number) => void;
   setVolume: (v: number) => void;
   toggleMute: () => void;
@@ -504,7 +499,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     const audio = get().audioEl;
     if (audio) {
       audio.currentTime = 0;
-      void audio.play().catch(() => {});
+      void audio.play().catch(() => { });
     }
   },
 
@@ -512,30 +507,29 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     if (songIds.length === 0) return;
     const shuf = get().shuffle
       ? (() => {
-          const a = shuffleArray(songIds);
-          const start = songIds[startIndex];
-          if (start) {
-            const i = a.indexOf(start);
-            if (i >= 0) {
-              a.splice(i, 1);
-              a.unshift(start);
-            }
+        const a = shuffleArray(songIds);
+        const start = songIds[startIndex];
+        if (start) {
+          const i = a.indexOf(start);
+          if (i >= 0) {
+            a.splice(i, 1);
+            a.unshift(start);
           }
-          return a;
-        })()
+        }
+        return a;
+      })()
       : songIds;
     set({
       queue: songIds,
       shuffleQueue: shuf,
-      currentIndex:
-        startIndex >= 0 && startIndex < songIds.length ? startIndex : 0,
+      currentIndex: startIndex >= 0 && startIndex < songIds.length ? startIndex : 0,
       isPlaying: true,
       currentTime: 0,
     });
     const audio = get().audioEl;
     if (audio) {
       audio.currentTime = 0;
-      void audio.play().catch(() => {});
+      void audio.play().catch(() => { });
     }
   },
 
@@ -550,7 +544,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     const audio = get().audioEl;
     if (!audio) return;
     if (audio.paused) {
-      void audio.play().catch(() => {});
+      void audio.play().catch(() => { });
     } else {
       audio.pause();
     }
@@ -573,19 +567,38 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
         return;
       }
     }
+    // If we're looping back to the same song (single-song queue with repeat "all"),
+    // we need to explicitly restart it — the AudioEngine won't reload the source
+    // since the song ID hasn't changed.
+    const isSameSong = nextIdx === st.currentIndex;
     set({
       currentIndex: nextIdx,
       currentTime: 0,
       isPlaying: true,
-      history:
-        st.currentIndex >= 0
+      history: isSameSong
+        ? st.history
+        : st.currentIndex >= 0
           ? [activeQueue[st.currentIndex], ...st.history].slice(0, 50)
           : st.history,
     });
-    const audio = get().audioEl;
-    if (audio) {
-      audio.currentTime = 0;
-      void audio.play().catch(() => {});
+    if (isSameSong) {
+      // Restart the current song.
+      const audio = get().audioEl;
+      if (audio) {
+        audio.currentTime = 0;
+        void audio.play().catch(() => { });
+      }
+      const embed = getActiveEmbedController();
+      if (embed) {
+        embed.seek(0);
+        embed.play();
+      }
+    } else {
+      const audio = get().audioEl;
+      if (audio) {
+        audio.currentTime = 0;
+        void audio.play().catch(() => { });
+      }
     }
   },
 
@@ -611,7 +624,22 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     set({ currentIndex: prevIdx, currentTime: 0, isPlaying: true });
     if (audio) {
       audio.currentTime = 0;
-      void audio.play().catch(() => {});
+      void audio.play().catch(() => { });
+    }
+  },
+
+  replayCurrent: () => {
+    // Restart the current song from the beginning (repeat-one mode).
+    set({ currentTime: 0, isPlaying: true });
+    const audio = get().audioEl;
+    if (audio) {
+      audio.currentTime = 0;
+      void audio.play().catch(() => { });
+    }
+    const embed = getActiveEmbedController();
+    if (embed) {
+      embed.seek(0);
+      embed.play();
     }
   },
 
@@ -710,8 +738,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     const newShuf = [...st.shuffleQueue];
     newQueue.splice(index, 1);
     newShuf.splice(index, 1);
-    const newIndex =
-      index < st.currentIndex ? st.currentIndex - 1 : st.currentIndex;
+    const newIndex = index < st.currentIndex ? st.currentIndex - 1 : st.currentIndex;
     set({ queue: newQueue, shuffleQueue: newShuf, currentIndex: newIndex });
   },
 
@@ -735,7 +762,7 @@ function useCurrentSongSelector(): Song | null {
   const currentIndex = usePlayerStore((s) => s.currentIndex);
   const activeQueue = shuffle ? shuffleQueue : queue;
   const id = activeQueue[currentIndex];
-  return id ? (songs.find((x) => x.id === id) ?? null) : null;
+  return id ? songs.find((x) => x.id === id) ?? null : null;
 }
 
 export function useCurrentSong(): Song | null {

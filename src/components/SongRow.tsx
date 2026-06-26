@@ -111,8 +111,7 @@ export function SongRow({
       });
     } catch (e: any) {
       toast.error("Couldn't download this song", {
-        description:
-          e?.message ?? "The source server may block cross-origin downloads.",
+        description: e?.message ?? "The source server may block cross-origin downloads.",
       });
     } finally {
       setDownloading(false);
@@ -170,9 +169,7 @@ export function SongRow({
 
   // Whether this song can be downloaded and stored locally (direct URLs only, not blob or embed).
   const canDownloadAndStore =
-    song.sourceType !== "blob" &&
-    song.sourceType !== "embed" &&
-    !!song.sourceUrl;
+    song.sourceType !== "blob" && song.sourceType !== "embed" && !!song.sourceUrl;
 
   return (
     <>
@@ -180,7 +177,7 @@ export function SongRow({
         className={cn(
           "group grid grid-cols-[2.5rem_1fr_auto] sm:grid-cols-[2rem_1fr_auto] items-center gap-3 px-2 sm:px-4 rounded-md transition-colors",
           "hover:bg-white/5",
-          isCurrent && "bg-white/5",
+          isCurrent && "bg-white/5"
         )}
       >
         {/* Left: index / play button */}
@@ -200,7 +197,7 @@ export function SongRow({
                   <span
                     className={cn(
                       "text-sm tabular-nums text-muted-foreground group-hover:hidden",
-                      isCurrent && "text-[#ff6b4a]",
+                      isCurrent && "text-[#ff6b4a]"
                     )}
                   >
                     {index !== undefined ? index + 1 : ""}
@@ -235,7 +232,7 @@ export function SongRow({
             <div
               className={cn(
                 "truncate text-sm font-medium flex items-center gap-1.5",
-                isCurrent ? "text-[#ff6b4a]" : "text-foreground",
+                isCurrent ? "text-[#ff6b4a]" : "text-foreground"
               )}
             >
               <span className="truncate">{song.title}</span>
@@ -260,16 +257,25 @@ export function SongRow({
             onClick={handleLike}
             className={cn(
               "opacity-0 group-hover:opacity-100 transition-opacity",
-              liked && "opacity-100",
+              liked && "opacity-100"
             )}
             aria-label={liked ? "Unlike" : "Like"}
           >
             <Heart
               size={16}
               className={cn(
-                liked ? "fill-current text-[#ff6b4a]" : "text-muted-foreground",
+                liked ? "fill-current text-[#ff6b4a]" : "text-muted-foreground"
               )}
             />
+          </button>
+          {/* Delete button — visible on hover (desktop) or always (mobile) */}
+          <button
+            onClick={() => setDeleteOpen(true)}
+            className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-400 sm:opacity-0 max-sm:opacity-60"
+            aria-label="Delete from library"
+            title="Delete from library"
+          >
+            <Trash2 size={15} />
           </button>
           <span className="hidden sm:block text-xs tabular-nums text-muted-foreground w-10 text-right">
             {formatTime(song.durationSec)}
@@ -293,10 +299,7 @@ export function SongRow({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleLike}>
                 <Heart
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    liked && "fill-current text-[#ff6b4a]",
-                  )}
+                  className={cn("mr-2 h-4 w-4", liked && "fill-current text-[#ff6b4a]")}
                 />
                 {liked ? "Remove from Liked" : "Save to Liked"}
               </DropdownMenuItem>
@@ -306,9 +309,7 @@ export function SongRow({
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="max-h-72 overflow-y-auto w-56">
                   {playlists.filter((p) => !p.system).length === 0 && (
-                    <DropdownMenuItem disabled>
-                      No playlists yet
-                    </DropdownMenuItem>
+                    <DropdownMenuItem disabled>No playlists yet</DropdownMenuItem>
                   )}
                   {playlists
                     .filter((p) => !p.system)
@@ -362,7 +363,11 @@ export function SongRow({
         </div>
       </div>
 
-      <EditSongDialog open={editOpen} onOpenChange={setEditOpen} song={song} />
+      <EditSongDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        song={song}
+      />
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent className="bg-[#111118] border-white/8 text-white">
