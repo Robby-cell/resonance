@@ -2,15 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { usePlayerStore, useLibraryStore } from "@/lib/store";
-import {
-  loadSpotifyIframeApi,
-  loadSoundCloudWidgetApi,
-  loadYouTubeIframeApi,
-} from "@/lib/loadScript";
-import {
-  setActiveEmbedController,
-  type EmbedController,
-} from "@/lib/embedController";
+import { loadSpotifyIframeApi, loadSoundCloudWidgetApi, loadYouTubeIframeApi } from "@/lib/loadScript";
+import { setActiveEmbedController, type EmbedController } from "@/lib/embedController";
 import { toSpotifyUri } from "@/lib/providers/spotify";
 
 /**
@@ -118,7 +111,7 @@ export function EmbedPlayer() {
         if (usePlayerStore.getState().isPlaying) {
           try {
             ctrl.play();
-          } catch {}
+          } catch { }
         }
 
         // Track play count once on load.
@@ -149,7 +142,7 @@ export function EmbedPlayer() {
         if (usePlayerStore.getState().isPlaying) {
           try {
             widget.play();
-          } catch {}
+          } catch { }
         }
         void useLibraryStore.getState().incrementPlayCount(currentSong!.id);
       });
@@ -188,10 +181,12 @@ export function EmbedPlayer() {
       }
 
       // YT.Player replaces the target element with an iframe. We use a div
-      // container so YT.Player creates the iframe inside it.
+      // container so YT.Player creates the iframe inside it. The container
+      // is shrunk to 1x1 and hidden off-screen so nothing is visible but
+      // audio still plays (display:none can pause audio in some browsers).
       const container = document.createElement("div");
       container.style.cssText =
-        "position:absolute;width:300px;height:200px;left:-9999px;top:0;border:none;";
+        "position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;border:0;overflow:hidden;visibility:hidden;pointer-events:none;";
       document.body.appendChild(container);
       if (destroyed) {
         container.remove();
@@ -217,7 +212,7 @@ export function EmbedPlayer() {
             if (usePlayerStore.getState().isPlaying) {
               try {
                 player.playVideo();
-              } catch {}
+              } catch { }
             }
             void useLibraryStore.getState().incrementPlayCount(currentSong!.id);
           },
@@ -256,7 +251,7 @@ export function EmbedPlayer() {
           if (player.getCurrentTime) {
             usePlayerStore.getState().setCurrentTime(player.getCurrentTime());
           }
-        } catch {}
+        } catch { }
       }, 250);
 
       // Store cleanup function to remove the container.
@@ -264,7 +259,7 @@ export function EmbedPlayer() {
         clearInterval(pollInterval);
         try {
           player.destroy();
-        } catch {}
+        } catch { }
         container.remove();
       };
     }
@@ -293,14 +288,16 @@ export function EmbedPlayer() {
       src={embedType === "soundcloud" ? embedUrl : undefined}
       allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
       style={{
-        position: "absolute",
-        width: "300px",
-        height: "152px",
-        // Keep it off-screen but rendered — some browsers won't play audio in
-        // display:none iframes.
+        position: "fixed",
+        width: "1px",
+        height: "1px",
+        // Hide completely — off-screen + zero size + hidden visibility.
+        // display:none can pause audio in some browsers, so we use this combo.
         left: "-9999px",
-        top: "0",
-        border: "none",
+        top: "-9999px",
+        border: "0",
+        overflow: "hidden",
+        visibility: "hidden",
         pointerEvents: "none",
       }}
       title="embed-player"
