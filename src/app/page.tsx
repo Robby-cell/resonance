@@ -44,7 +44,7 @@ export default function Home() {
 
   return (
     <div
-      className="flex flex-col bg-[#08080c] text-white safe-top safe-left safe-right"
+      className="flex flex-col bg-[#08080c] text-white"
       style={{ height: "100dvh" }}
     >
       {/* Main grid: sidebar + main content */}

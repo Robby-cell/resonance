@@ -32,7 +32,7 @@ export function TopBar({
 
   return (
     <>
-      <header className="sticky top-0 z-20 px-3 sm:px-4 py-2.5 flex items-center gap-2 sm:gap-3 bg-gradient-to-b from-black/60 to-transparent backdrop-blur-sm">
+      <header className="sticky top-0 z-20 px-3 sm:px-4 py-2.5 flex items-center gap-2 sm:gap-3 bg-gradient-to-b from-black/60 to-transparent backdrop-blur-sm safe-top safe-left safe-right">
         <Button
           variant="ghost"
           size="icon"
