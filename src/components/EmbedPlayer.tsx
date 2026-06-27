@@ -7,13 +7,13 @@ import { setActiveEmbedController, type EmbedController } from "@/lib/embedContr
 import { toSpotifyUri } from "@/lib/providers/spotify";
 
 /**
- * EmbedPlayer — owns a hidden iframe that plays Spotify/SoundCloud embeds.
+ * EmbedPlayer — owns a hidden iframe that plays Spotify/SoundCloud/YouTube embeds.
  *
  * Renders nothing visible. The visible UI (player bar) lives in <PlayerBar />.
  *
  * When the current song has `sourceType === "embed"`:
  *   1. Creates an iframe with the embed URL
- *   2. Loads the platform's API script (Spotify IFrame API / SoundCloud Widget API)
+ *   2. Loads the platform's API script (Spotify IFrame API / SoundCloud Widget API / YouTube IFrame API)
  *   3. Wires the controller to the player store via the embedController bridge
  *
  * When the current song is NOT an embed, this component renders nothing and
@@ -185,26 +185,26 @@ export function EmbedPlayer() {
         return;
       }
 
-      // YT.Player replaces the target element with an iframe. We use a div
-      // container so YT.Player creates the iframe inside it. The container
-      // is shrunk to 1x1 and hidden off-screen so nothing is visible but
-      // audio still plays (display:none can pause audio in some browsers).
+      // YT.Player replaces the target element with an iframe.
+      // On iOS Safari, the iframe must be "visible" (not visibility:hidden or
+      // opacity:0) to play audio. We position it 1x1 off-screen instead.
       const container = document.createElement("div");
       container.style.cssText =
-        "position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;border:0;overflow:hidden;visibility:hidden;pointer-events:none;";
+        "position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;border:0;overflow:hidden;pointer-events:none;";
       document.body.appendChild(container);
       if (destroyed) {
         container.remove();
         return;
       }
 
-      // Watch for the iframe that YT.Player will insert into the container,
-      // and hide it immediately when it appears.
+      // Watch for the iframe that YT.Player will insert into the container.
+      // Keep it 1x1 and off-screen but DON'T use visibility:hidden or opacity:0
+      // — iOS Safari won't play audio in hidden iframes.
       const observer = new MutationObserver(() => {
         const iframe = container.querySelector('iframe');
         if (iframe) {
           iframe.style.cssText =
-            'position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;border:0;overflow:hidden;visibility:hidden;pointer-events:none;opacity:0;';
+            'position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;border:0;overflow:hidden;pointer-events:none;';
         }
       });
       observer.observe(container, { childList: true, subtree: true });
@@ -219,17 +219,17 @@ export function EmbedPlayer() {
           modestbranding: 1,
           playsinline: 1,
           rel: 0,
-          iv_load_policy: 3, // hide annotations
+          iv_load_policy: 3,
           showinfo: 0,
         },
         events: {
           onReady: (e: any) => {
             if (destroyed) return;
-            // Aggressively hide the iframe that YT.Player created.
+            // Keep iframe 1x1 and off-screen (but visible for iOS compatibility).
             const iframe = e.target?.getIframe?.() || container.querySelector('iframe');
             if (iframe) {
               iframe.style.cssText =
-                'position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;border:0;overflow:hidden;visibility:hidden;pointer-events:none;opacity:0;';
+                'position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;border:0;overflow:hidden;pointer-events:none;';
             }
             const dur = player.getDuration();
             usePlayerStore.getState().setDuration(dur || 0);
@@ -321,13 +321,12 @@ export function EmbedPlayer() {
         position: "fixed",
         width: "1px",
         height: "1px",
-        // Hide completely — off-screen + zero size + hidden visibility.
-        // display:none can pause audio in some browsers, so we use this combo.
+        // Off-screen + 1x1 size. Don't use visibility:hidden or opacity:0 —
+        // iOS Safari won't play audio in hidden iframes.
         left: "-9999px",
         top: "-9999px",
         border: "0",
         overflow: "hidden",
-        visibility: "hidden",
         pointerEvents: "none",
       }}
       title="embed-player"

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -27,6 +27,28 @@ export const metadata: Metadata = {
     "music discovery",
   ],
   authors: [{ name: "Resonance" }],
+  manifest: "./manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "./favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "./icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "./apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Resonance",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#08080c",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -36,6 +58,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
