@@ -60,8 +60,8 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
           "fixed md:relative z-50 md:z-auto top-0 left-0 h-full md:h-auto",
           "w-72 md:w-60 lg:w-64 shrink-0",
           "transition-transform duration-300 ease-out",
-          "flex flex-col gap-2 p-2",
-          isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+          "flex flex-col gap-2 p-2 safe-top safe-left",
+          isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >
         {/* Brand + top nav */}
@@ -149,7 +149,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
                 "group w-full flex items-center gap-3 rounded-md p-2 text-left transition-colors",
                 view.kind === "liked"
                   ? "bg-white/[0.06]"
-                  : "hover:bg-white/[0.03]",
+                  : "hover:bg-white/[0.03]"
               )}
               onClick={() => {
                 setView({ kind: "liked" });
@@ -164,8 +164,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
                   Liked Songs
                 </div>
                 <div className="text-xs text-white/40">
-                  {liked?.songIds.length ?? 0} song
-                  {(liked?.songIds.length ?? 0) !== 1 ? "s" : ""}
+                  {liked?.songIds.length ?? 0} song{(liked?.songIds.length ?? 0) !== 1 ? "s" : ""}
                 </div>
               </div>
             </button>
@@ -205,7 +204,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
                     "group w-full flex items-center gap-3 rounded-md p-2 text-left transition-colors",
                     view.kind === "playlist" && view.id === p.id
                       ? "bg-white/[0.06]"
-                      : "hover:bg-white/[0.03]",
+                      : "hover:bg-white/[0.03]"
                   )}
                   onClick={() => {
                     setView({ kind: "playlist", id: p.id });
@@ -215,7 +214,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
                   <div
                     className={cn(
                       "w-11 h-11 rounded-md bg-gradient-to-br flex items-center justify-center shrink-0",
-                      gradientFor(p.coverSeed ?? p.id),
+                      gradientFor(p.coverSeed ?? p.id)
                     )}
                   >
                     <ListMusic className="h-5 w-5 text-white/80" />
@@ -275,7 +274,7 @@ function NavItem({
         "flex items-center gap-3.5 px-2.5 py-2 rounded-md text-sm font-semibold transition-colors w-full text-left",
         active
           ? "text-white bg-white/[0.04]"
-          : "text-white/55 hover:text-white",
+          : "text-white/55 hover:text-white"
       )}
       onClick={onClick}
     >

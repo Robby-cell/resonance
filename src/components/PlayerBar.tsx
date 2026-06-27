@@ -89,7 +89,7 @@ export function PlayerBar({ onOpenQueue }: PlayerBarProps) {
   const volumePct = (muted ? 0 : volume) * 100;
 
   return (
-    <footer className="bg-[#0a0a0f] border-t border-white/5 px-3 sm:px-4 pt-2 pb-2 sm:pb-3 z-30">
+    <footer className="bg-[#0a0a0f] border-t border-white/5 px-3 sm:px-4 pt-2 pb-2 sm:pb-3 z-30 safe-bottom">
       {/* Full-width seek bar — always visible on top */}
       {currentSong && (
         <div className="flex items-center gap-2 sm:gap-3 mb-2">
@@ -380,6 +380,7 @@ export function QueuePanel({ open, onClose }: QueuePanelProps) {
         "fixed right-0 top-0 bottom-0 w-full sm:w-96 bg-[#0a0a0f] z-50",
         "border-l border-white/8 flex flex-col",
         "transform transition-transform duration-300 ease-out",
+        "safe-top safe-bottom safe-right",
         open ? "translate-x-0" : "translate-x-full"
       )}
     >
