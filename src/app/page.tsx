@@ -43,7 +43,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#08080c] text-white">
+    <div className="flex flex-col bg-[#08080c] text-white" style={{ height: "100dvh" }}>
       {/* Main grid: sidebar + main content */}
       <div className="flex flex-1 min-h-0 gap-0 md:gap-2 md:p-2 md:pb-0">
         <Sidebar
