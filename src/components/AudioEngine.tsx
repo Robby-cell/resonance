@@ -33,6 +33,21 @@ export function AudioEngine() {
     setAudioEl(a);
     a.volume = usePlayerStore.getState().volume;
 
+    // iOS Safari unlock: on the first user interaction, call play() then
+    // immediately pause() to "unlock" the audio element. This allows
+    // subsequent programmatic play() calls to work without a user gesture.
+    const unlock = () => {
+      a.play().then(() => {
+        a.pause();
+        a.currentTime = 0;
+      }).catch(() => { });
+      // Remove listeners after first unlock.
+      document.removeEventListener("touchend", unlock);
+      document.removeEventListener("click", unlock);
+    };
+    document.addEventListener("touchend", unlock, { once: true });
+    document.addEventListener("click", unlock, { once: true });
+
     const onTime = () => usePlayerStore.getState().setCurrentTime(a.currentTime);
     const onDur = () => usePlayerStore.getState().setDuration(a.duration || 0);
     const onPlay = () => usePlayerStore.getState().setIsPlaying(true);
@@ -55,6 +70,8 @@ export function AudioEngine() {
       a.removeEventListener("playing", onPlay);
       a.removeEventListener("pause", onPause);
       a.removeEventListener("ended", onEnd);
+      document.removeEventListener("touchend", unlock);
+      document.removeEventListener("click", unlock);
     };
   }, []);
 
@@ -136,5 +153,5 @@ export function AudioEngine() {
     audioRef.current.muted = muted;
   }, [volume, muted]);
 
-  return <audio ref={audioRef} preload="metadata" className="hidden" />;
+  return <audio ref={audioRef} preload="auto" playsInline className="hidden" />;
 }

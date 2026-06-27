@@ -526,8 +526,23 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       isPlaying: true,
       currentTime: 0,
     });
+    // On iOS Safari, audio.play() must be called within a user gesture.
+    // The AudioEngine's useEffect runs AFTER the re-render, which breaks
+    // the gesture chain. So we call play() here synchronously.
+    // For direct URL songs, we can set the src immediately and play.
+    // For blob songs, calling play() "unlocks" the audio element even
+    // though the src isn't ready — the AudioEngine effect will set the
+    // correct src and play again (which works because the element is unlocked).
     const audio = get().audioEl;
     if (audio) {
+      const lib = useLibraryStore.getState();
+      const songId = shuf[startIndex >= 0 && startIndex < shuf.length ? startIndex : 0];
+      const song = songId ? lib.songs.find((s) => s.id === songId) : null;
+      if (song && song.sourceType !== "embed" && song.sourceType !== "blob" && song.sourceUrl) {
+        // Direct URL song — set src synchronously and play within the gesture.
+        audio.src = song.sourceUrl;
+        audio.load();
+      }
       audio.currentTime = 0;
       void audio.play().catch(() => { });
     }
